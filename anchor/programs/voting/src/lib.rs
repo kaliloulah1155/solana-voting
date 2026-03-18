@@ -5,7 +5,7 @@ use anchor_lang::system_program::{transfer, Transfer};
 mod tests;
 
 declare_id!("E4tUxezap8Gj42fHCxndPenNxNPARYVRyH6yhFABn3gL");
-
+   
 #[program]
 pub mod voting {
     use super::*;
