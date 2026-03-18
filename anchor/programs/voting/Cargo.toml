@@ -1,0 +1,30 @@
+[package]
+name = "voting"
+version = "0.1.0"
+description = "A simple SOL voting program"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "voting"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(target_os, values(\"solana\"))"] }
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+
+[dependencies]
+anchor-lang = "0.32.1"
+
+[dev-dependencies]
+litesvm = "=0.7.1"
+solana-sdk = "2.3"

@@ -1,0 +1,5 @@
+[target.'cfg(all())']
+# Solana programs use `cfg(target_os = "solana")` in proc-macro expansions.
+# Newer Rust versions warn about unknown `target_os` values unless declared.
+rustflags = ["--check-cfg=cfg(target_os,values(\"solana\"))"]
+
