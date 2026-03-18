@@ -4,7 +4,7 @@ use anchor_lang::system_program::{transfer, Transfer};
 #[cfg(test)]
 mod tests;
 
-declare_id!("Hod4tDmSKRsoBBWtF8fFjTFugzp8kVE6dF3UaJsUPkX");
+declare_id!("E4tUxezap8Gj42fHCxndPenNxNPARYVRyH6yhFABn3gL");
 
 #[program]
 pub mod voting {

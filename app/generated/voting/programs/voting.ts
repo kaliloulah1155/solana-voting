@@ -24,7 +24,7 @@ import {
 } from "../instructions";
 
 export const VOTING_PROGRAM_ADDRESS =
-  "Hod4tDmSKRsoBBWtF8fFjTFugzp8kVE6dF3UaJsUPkX" as Address<"Hod4tDmSKRsoBBWtF8fFjTFugzp8kVE6dF3UaJsUPkX">;
+  "E4tUxezap8Gj42fHCxndPenNxNPARYVRyH6yhFABn3gL" as Address<"E4tUxezap8Gj42fHCxndPenNxNPARYVRyH6yhFABn3gL">;
 
 export enum VotingInstruction {
   Deposit,
@@ -63,7 +63,7 @@ export function identifyVotingInstruction(
 }
 
 export type ParsedVotingInstruction<
-  TProgram extends string = "Hod4tDmSKRsoBBWtF8fFjTFugzp8kVE6dF3UaJsUPkX",
+  TProgram extends string = "E4tUxezap8Gj42fHCxndPenNxNPARYVRyH6yhFABn3gL",
 > =
   | ({
       instructionType: VotingInstruction.Deposit;

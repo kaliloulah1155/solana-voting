@@ -1,6 +1,26 @@
-# Anchor Vault Program
+# Anchor Voting Program
 
-This template includes a simple SOL vault program built with [Anchor](https://www.anchor-lang.com/).
+This project includes a simple SOL voting program built with [Anchor](https://www.anchor-lang.com/).
+
+## Prerequisites (Windows)
+
+`anchor build` needs the Solana/Agave toolchain so that `cargo build-sbf` is available. If you see **"no such command: build-sbf"**:
+
+1. **Install Agave CLI** (in PowerShell as Administrator):
+
+   ```powershell
+   cmd /c "curl https://release.anza.xyz/v3.1.9/agave-install-init-x86_64-pc-windows-msvc.exe --output C:\agave-install-tmp\agave-install-init.exe --create-dirs"
+   C:\agave-install-tmp\agave-install-init.exe v3.1.9
+   ```
+
+2. **Restart your terminal**, then check:
+
+   ```powershell
+   solana --version
+   cargo build-sbf --version
+   ```
+
+3. If `cargo build-sbf` is still not found, add the Agave bin folder to your user PATH (e.g. `%USERPROFILE%\.local\share\solana\install\active_release\bin` or the path shown by the installer).
 
 ## Pre-deployed Program
 

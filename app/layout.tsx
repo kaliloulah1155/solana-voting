@@ -29,16 +29,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themeScript = `(function(){var t=localStorage.getItem("voting-dapp-theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}else{var d=window.matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.setAttribute("data-theme",d?"dark":"light")}})();`;
+
   return (
-    <html lang="en">
-      <Providers>
-        <body
-          suppressHydrationWarning
-          className={`${inter.variable} ${geistMono.variable} antialiased`}
-        >
-          {children}
-        </body>
-      </Providers>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        suppressHydrationWarning
+        className={`${inter.variable} ${geistMono.variable} antialiased`}
+      >
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

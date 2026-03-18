@@ -4,6 +4,7 @@ import { SolanaProvider } from "@solana/react-hooks";
 import { PropsWithChildren } from "react";
 
 import { autoDiscover, createClient } from "@solana/client";
+import { ThemeProvider } from "./theme-provider";
 
 const client = createClient({
   endpoint: "https://api.devnet.solana.com",
@@ -11,5 +12,9 @@ const client = createClient({
 });
 
 export function Providers({ children }: PropsWithChildren) {
-  return <SolanaProvider client={client}>{children}</SolanaProvider>;
+  return (
+    <ThemeProvider>
+      <SolanaProvider client={client}>{children}</SolanaProvider>
+    </ThemeProvider>
+  );
 }

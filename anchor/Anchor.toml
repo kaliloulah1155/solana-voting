@@ -1,11 +1,12 @@
 [toolchain]
+anchor_version = "0.32.1"
 
 [features]
 resolution = true
 skip-lint = false
 
 [programs.devnet]
-voting = "Hod4tDmSKRsoBBWtF8fFjTFugzp8kVE6dF3UaJsUPkX"
+voting = "E4tUxezap8Gj42fHCxndPenNxNPARYVRyH6yhFABn3gL"
 
 [provider]
 cluster = "https://api.devnet.solana.com"
