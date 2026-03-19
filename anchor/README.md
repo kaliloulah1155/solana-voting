@@ -89,8 +89,37 @@ Each user gets their own vault derived from their wallet address.
 
 ## Testing
 
-Run the Anchor tests:
+**Important:** Les commandes `anchor build` et `anchor test` doivent être exécutées **depuis le dossier `anchor/`** (ou depuis la racine via les scripts npm). Depuis la racine du projet, ne pas lancer `anchor test` directement, sinon : *"Not in a Solana workspace"*.
+
+### Tests Rust (LiteSVM)
+
+Depuis la racine du projet (`voting-dapp/`) :
 
 ```bash
+npm run anchor-test
+```
+
+Ou depuis le dossier `anchor/` :
+
+```bash
+cd anchor
+anchor build
 anchor test --skip-deploy
+```
+
+### Tests TypeScript (anchor-bankrun)
+
+Les tests dans `anchor/tests/voting.spec.ts` utilisent [anchor-bankrun](https://github.com/kevinheavey/anchor-bankrun). Depuis la racine du projet, après un build :
+
+```bash
+npm run anchor-build
+npm run anchor-test:ts
+```
+
+**Sous WSL (Linux)** : si vous avez l’erreur `Cannot find module 'solana-bankrun-linux-x64-gnu'`, réinstallez les dépendances depuis WSL pour installer le binaire Linux : `npm install`, puis relancez `npm run anchor-test:ts`. Le projet déclare `solana-bankrun-linux-x64-gnu` en optionalDependency pour que ce binaire soit installé sous Linux.
+
+### Tout en une fois (build + tests Rust + tests TS)
+
+```bash
+npm run anchor-build && npm run anchor-test && npm run anchor-test:ts
 ```

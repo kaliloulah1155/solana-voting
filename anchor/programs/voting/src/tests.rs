@@ -11,160 +11,159 @@ mod tests {
         transaction::Transaction,
     };
 
-    const LAMPORTS_PER_SOL: u64 = 1_000_000_000;
-
-    fn get_voting_pda(signer: &Pubkey) -> (Pubkey, u8) {
-        Pubkey::find_program_address(&[b"voting", signer.as_ref()], &PROGRAM_ID)
+    fn get_poll_pda(poll_id: u64) -> (Pubkey, u8) {
+        Pubkey::find_program_address(&[&poll_id.to_le_bytes()], &PROGRAM_ID)
     }
 
-    fn create_deposit_ix(signer: &Pubkey, voting: &Pubkey, amount: u64) -> Instruction {
-        // Anchor discriminator for "deposit" = hash("global:deposit")[0..8]
-        let discriminator: [u8; 8] = [242, 35, 198, 137, 82, 225, 242, 182];
+    fn create_initialize_poll_ix(
+        signer: &Pubkey,
+        poll: &Pubkey,
+        poll_id: u64,
+        description: &str,
+        poll_start: u64,
+        poll_end: u64,
+    ) -> Instruction {
+        // Anchor discriminator for "initialize_poll" from IDL
+        let discriminator: [u8; 8] = [193, 22, 99, 197, 18, 33, 115, 117];
         let mut data = discriminator.to_vec();
-        data.extend_from_slice(&amount.to_le_bytes());
+        data.extend_from_slice(&poll_id.to_le_bytes());
+        // Borsh string: 4-byte length (u32 le) + utf-8 bytes
+        let desc_bytes = description.as_bytes();
+        data.extend_from_slice(&(desc_bytes.len() as u32).to_le_bytes());
+        data.extend_from_slice(desc_bytes);
+        data.extend_from_slice(&poll_start.to_le_bytes());
+        data.extend_from_slice(&poll_end.to_le_bytes());
 
         Instruction {
             program_id: PROGRAM_ID,
             accounts: vec![
                 AccountMeta::new(*signer, true),
-                AccountMeta::new(*voting, false),
+                AccountMeta::new(*poll, false),
                 AccountMeta::new_readonly(system_program::ID, false),
             ],
             data,
         }
     }
 
-    fn create_withdraw_ix(signer: &Pubkey, voting: &Pubkey) -> Instruction {
-        // Anchor discriminator for "withdraw" = hash("global:withdraw")[0..8]
-        let discriminator: [u8; 8] = [183, 18, 70, 156, 148, 109, 161, 34];
-
-        Instruction {
-            program_id: PROGRAM_ID,
-            accounts: vec![
-                AccountMeta::new(*signer, true),
-                AccountMeta::new(*voting, false),
-                AccountMeta::new_readonly(system_program::ID, false),
-            ],
-            data: discriminator.to_vec(),
-        }
-    }
-
     #[test]
-    fn test_deposit_and_withdraw() {
-        let mut svm = LiteSVM::new();
-
-        // Load the program
-        let program_bytes = include_bytes!("../../../target/deploy/voting.so");
-        svm.add_program(PROGRAM_ID, program_bytes);
-
-        // Create a user with some SOL
-        let user = Keypair::new();
-        svm.airdrop(&user.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
-
-        // Get voting PDA
-        let (voting_pda, _bump) = get_voting_pda(&user.pubkey());
-
-        // Deposit 1 SOL
-        let deposit_amount = LAMPORTS_PER_SOL;
-        let deposit_ix = create_deposit_ix(&user.pubkey(), &voting_pda, deposit_amount);
-
-        let blockhash = svm.latest_blockhash();
-        let deposit_tx = Transaction::new_signed_with_payer(
-            &[deposit_ix],
-            Some(&user.pubkey()),
-            &[&user],
-            blockhash,
-        );
-
-        let result = svm.send_transaction(deposit_tx);
-        assert!(result.is_ok(), "Deposit should succeed");
-
-        // Check voting balance
-        let voting_account = svm.get_account(&voting_pda).unwrap();
-        assert_eq!(voting_account.lamports, deposit_amount);
-
-        // Withdraw
-        let withdraw_ix = create_withdraw_ix(&user.pubkey(), &voting_pda);
-
-        let blockhash = svm.latest_blockhash();
-        let withdraw_tx = Transaction::new_signed_with_payer(
-            &[withdraw_ix],
-            Some(&user.pubkey()),
-            &[&user],
-            blockhash,
-        );
-
-        let result = svm.send_transaction(withdraw_tx);
-        assert!(result.is_ok(), "Withdraw should succeed");
-
-        // Check voting is empty (account may not exist or have 0 lamports)
-        let voting_account = svm.get_account(&voting_pda);
-        assert!(
-            voting_account.is_none() || voting_account.unwrap().lamports == 0,
-            "Voting should be empty after withdraw"
-        );
-    }
-
-    #[test]
-    fn test_deposit_fails_if_voting_has_funds() {
+    fn test_initialize_poll_succeeds() {
         let mut svm = LiteSVM::new();
 
         let program_bytes = include_bytes!("../../../target/deploy/voting.so");
-        svm.add_program(PROGRAM_ID, program_bytes);
+        let _ = svm.add_program(PROGRAM_ID, program_bytes);
 
         let user = Keypair::new();
-        svm.airdrop(&user.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
+        svm.airdrop(&user.pubkey(), 10_000_000_000).unwrap();
 
-        let (voting_pda, _bump) = get_voting_pda(&user.pubkey());
+        let poll_id = 1u64;
+        let (poll_pda, _bump) = get_poll_pda(poll_id);
+        let description = "Test poll";
+        let poll_start = 100u64;
+        let poll_end = 200u64;
 
-        // First deposit
-        let deposit_ix = create_deposit_ix(&user.pubkey(), &voting_pda, LAMPORTS_PER_SOL);
+        let ix = create_initialize_poll_ix(
+            &user.pubkey(),
+            &poll_pda,
+            poll_id,
+            description,
+            poll_start,
+            poll_end,
+        );
+
         let blockhash = svm.latest_blockhash();
         let tx = Transaction::new_signed_with_payer(
-            &[deposit_ix],
-            Some(&user.pubkey()),
-            &[&user],
-            blockhash,
-        );
-        svm.send_transaction(tx).unwrap();
-
-        // Second deposit should fail
-        let deposit_ix2 = create_deposit_ix(&user.pubkey(), &voting_pda, LAMPORTS_PER_SOL);
-        let blockhash = svm.latest_blockhash();
-        let tx2 = Transaction::new_signed_with_payer(
-            &[deposit_ix2],
-            Some(&user.pubkey()),
-            &[&user],
-            blockhash,
-        );
-
-        let result = svm.send_transaction(tx2);
-        assert!(result.is_err(), "Second deposit should fail");
-    }
-
-    #[test]
-    fn test_withdraw_fails_if_voting_empty() {
-        let mut svm = LiteSVM::new();
-
-        let program_bytes = include_bytes!("../../../target/deploy/voting.so");
-        svm.add_program(PROGRAM_ID, program_bytes);
-
-        let user = Keypair::new();
-        svm.airdrop(&user.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
-
-        let (voting_pda, _bump) = get_voting_pda(&user.pubkey());
-
-        // Try to withdraw from empty voting
-        let withdraw_ix = create_withdraw_ix(&user.pubkey(), &voting_pda);
-        let blockhash = svm.latest_blockhash();
-        let tx = Transaction::new_signed_with_payer(
-            &[withdraw_ix],
+            &[ix],
             Some(&user.pubkey()),
             &[&user],
             blockhash,
         );
 
         let result = svm.send_transaction(tx);
-        assert!(result.is_err(), "Withdraw from empty voting should fail");
+        assert!(result.is_ok(), "initialize_poll should succeed");
+
+        let account = svm.get_account(&poll_pda).unwrap();
+        assert!(account.data.len() >= 8, "Poll account should have data");
+    }
+
+    #[test]
+    fn test_initialize_poll_twice_same_id_fails() {
+        let mut svm = LiteSVM::new();
+
+        let program_bytes = include_bytes!("../../../target/deploy/voting.so");
+        let _ = svm.add_program(PROGRAM_ID, program_bytes);
+
+        let user = Keypair::new();
+        svm.airdrop(&user.pubkey(), 10_000_000_000).unwrap();
+
+        let poll_id = 42u64;
+        let (poll_pda, _) = get_poll_pda(poll_id);
+
+        let ix1 = create_initialize_poll_ix(
+            &user.pubkey(),
+            &poll_pda,
+            poll_id,
+            "First",
+            0,
+            100,
+        );
+        let blockhash = svm.latest_blockhash();
+        let tx1 = Transaction::new_signed_with_payer(
+            &[ix1],
+            Some(&user.pubkey()),
+            &[&user],
+            blockhash,
+        );
+        svm.send_transaction(tx1).unwrap();
+
+        let ix2 = create_initialize_poll_ix(
+            &user.pubkey(),
+            &poll_pda,
+            poll_id,
+            "Second",
+            0,
+            100,
+        );
+        let blockhash = svm.latest_blockhash();
+        let tx2 = Transaction::new_signed_with_payer(
+            &[ix2],
+            Some(&user.pubkey()),
+            &[&user],
+            blockhash,
+        );
+
+        let result = svm.send_transaction(tx2);
+        assert!(result.is_err(), "Second initialize_poll with same poll_id should fail");
+    }
+
+    #[test]
+    fn test_initialize_poll_different_ids_succeeds() {
+        let mut svm = LiteSVM::new();
+
+        let program_bytes = include_bytes!("../../../target/deploy/voting.so");
+        let _ = svm.add_program(PROGRAM_ID, program_bytes);
+
+        let user = Keypair::new();
+        svm.airdrop(&user.pubkey(), 10_000_000_000).unwrap();
+
+        for poll_id in [1u64, 2u64, 3u64] {
+            let (poll_pda, _) = get_poll_pda(poll_id);
+            let ix = create_initialize_poll_ix(
+                &user.pubkey(),
+                &poll_pda,
+                poll_id,
+                "Poll",
+                0,
+                100,
+            );
+            let blockhash = svm.latest_blockhash();
+            let tx = Transaction::new_signed_with_payer(
+                &[ix],
+                Some(&user.pubkey()),
+                &[&user],
+                blockhash,
+            );
+            let result = svm.send_transaction(tx);
+            assert!(result.is_ok(), "initialize_poll for poll_id {} should succeed", poll_id);
+        }
     }
 }

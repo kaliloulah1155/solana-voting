@@ -5,6 +5,9 @@ anchor_version = "0.32.1"
 resolution = true
 skip-lint = false
 
+[programs.localnet]
+voting = "E4tUxezap8Gj42fHCxndPenNxNPARYVRyH6yhFABn3gL"
+
 [programs.devnet]
 voting = "E4tUxezap8Gj42fHCxndPenNxNPARYVRyH6yhFABn3gL"
 

@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_lang::system_program::{transfer, Transfer};
 
 #[cfg(test)]
 mod tests;
@@ -10,66 +9,45 @@ declare_id!("E4tUxezap8Gj42fHCxndPenNxNPARYVRyH6yhFABn3gL");
 pub mod voting {
     use super::*;
 
-    pub fn deposit(ctx: Context<VotingAction>, amount: u64) -> Result<()> {
-        require!(ctx.accounts.voting.lamports() == 0, VotingError::VotingAlreadyExists);
-
-        let rent = Rent::get()?.minimum_balance(0);
-        require!(amount > rent, VotingError::InvalidAmount);
-
-        transfer(
-            CpiContext::new(
-                ctx.accounts.system_program.to_account_info(),
-                Transfer {
-                    from: ctx.accounts.signer.to_account_info(),
-                    to: ctx.accounts.voting.to_account_info(),
-                },
-            ),
-            amount,
-        )?;
-
-        Ok(())
-    }
-
-    pub fn withdraw(ctx: Context<VotingAction>) -> Result<()> {
-        require!(ctx.accounts.voting.lamports() > 0, VotingError::InvalidAmount);
-
-        let bump = ctx.bumps.voting;
-        let signer_key = ctx.accounts.signer.key();
-        let signer_seeds: &[&[&[u8]]] = &[&[b"voting", signer_key.as_ref(), &[bump]]];
-
-        transfer(
-            CpiContext::new_with_signer(
-                ctx.accounts.system_program.to_account_info(),
-                Transfer {
-                    from: ctx.accounts.voting.to_account_info(),
-                    to: ctx.accounts.signer.to_account_info(),
-                },
-                signer_seeds,
-            ),
-            ctx.accounts.voting.lamports(),
-        )?;
-
+    pub fn initialize_poll(ctx: Context<InitializePoll>,
+        poll_id: u64,
+        description: String,
+        poll_start: u64,
+        poll_end:u64
+    ) -> Result<()> {
+        let poll = &mut ctx.accounts.poll;
+        poll.poll_id = poll_id;
+        poll.description = description;
+        poll.poll_start = poll_start;
+        poll.poll_end = poll_end;
+        poll.candidate_amount=0;
         Ok(())
     }
 }
 
 #[derive(Accounts)]
-pub struct VotingAction<'info> {
+#[instruction(poll_id: u64)]
+pub struct InitializePoll<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
     #[account(
-        mut,
-        seeds = [b"voting", signer.key().as_ref()],
+        init,
+        payer=signer,
+        space=8 + Poll::INIT_SPACE,
+        seeds=[poll_id.to_le_bytes().as_ref()],
         bump,
     )]
-    pub voting: SystemAccount<'info>,
+    pub poll: Account<'info, Poll>,
     pub system_program: Program<'info, System>,
 }
-
-#[error_code]
-pub enum VotingError {
-    #[msg("Voting already exists")]
-    VotingAlreadyExists,
-    #[msg("Invalid amount")]
-    InvalidAmount,
+ 
+#[account]
+#[derive(InitSpace)]
+pub struct Poll {
+    pub poll_id: u64,
+    #[max_len(280)]
+    pub description: String,
+    pub poll_start: u64,
+    pub poll_end: u64,
+    pub candidate_amount:u64
 }
