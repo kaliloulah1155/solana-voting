@@ -5,6 +5,13 @@ mod tests;
 
 declare_id!("E4tUxezap8Gj42fHCxndPenNxNPARYVRyH6yhFABn3gL");
    
+/// Candidat du vote : affiché par son nom dans l’explorateur Solana (IDL).
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
+pub enum Candidate {
+    Crunchy,
+    Smooth,
+}
+
 #[program]
 pub mod voting {
     use super::*;
@@ -20,7 +27,25 @@ pub mod voting {
         poll.description = description;
         poll.poll_start = poll_start;
         poll.poll_end = poll_end;
-        poll.candidate_amount=0;
+        poll.candidate_amount = 0;
+        poll.crunchy_votes = 0;
+        poll.smooth_votes = 0;
+        Ok(())
+    }
+
+    /// Vote pour un candidat (Crunchy ou Smooth).
+    pub fn vote(ctx: Context<Vote>, _poll_id: u64, candidate: Candidate) -> Result<()> {
+        let poll = &mut ctx.accounts.poll;
+        match candidate {
+            Candidate::Crunchy => {
+                msg!("Candidate: crunchy");
+                poll.crunchy_votes = poll.crunchy_votes.saturating_add(1);
+            }
+            Candidate::Smooth => {
+                msg!("Candidate: smooth");
+                poll.smooth_votes = poll.smooth_votes.saturating_add(1);
+            }
+        }
         Ok(())
     }
 }
@@ -40,7 +65,25 @@ pub struct InitializePoll<'info> {
     pub poll: Account<'info, Poll>,
     pub system_program: Program<'info, System>,
 }
- 
+
+#[derive(Accounts)]
+#[instruction(poll_id: u64)]
+pub struct Vote<'info> {
+    pub signer: Signer<'info>,
+    #[account(
+        mut,
+        seeds=[poll_id.to_le_bytes().as_ref()],
+        bump,
+    )]
+    pub poll: Account<'info, Poll>,
+}
+
+#[error_code]
+pub enum ErrorCode {
+    #[msg("Candidate must be 0 (crunchy) or 1 (smooth)")]
+    InvalidCandidate,
+}
+
 #[account]
 #[derive(InitSpace)]
 pub struct Poll {
@@ -49,5 +92,7 @@ pub struct Poll {
     pub description: String,
     pub poll_start: u64,
     pub poll_end: u64,
-    pub candidate_amount:u64
+    pub candidate_amount: u64,
+    pub crunchy_votes: u64,
+    pub smooth_votes: u64,
 }

@@ -98,6 +98,8 @@ describe("voting program (anchor-bankrun)", () => {
       pollStart: BNInstance;
       pollEnd: BNInstance;
       candidateAmount: BNInstance;
+      crunchyVotes: BNInstance;
+      smoothVotes: BNInstance;
     };
 
     const accountNamespace = program.account as unknown as {
@@ -110,6 +112,8 @@ describe("voting program (anchor-bankrun)", () => {
     assert.equal(poll.pollStart.toNumber(), 100);
     assert.equal(poll.pollEnd.toNumber(), 200);
     assert.equal(poll.candidateAmount.toNumber(), 0);
+    assert.equal(poll.crunchyVotes?.toNumber?.() ?? 0, 0);
+    assert.equal(poll.smoothVotes?.toNumber?.() ?? 0, 0);
   });
 });
 

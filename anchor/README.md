@@ -65,9 +65,52 @@ anchor build
 # Get devnet SOL for deployment (~2 SOL needed)
 solana airdrop 2 --url devnet
 
-# Deploy to devnet
-anchor deploy --provider.cluster devnet
+# Deploy to devnet (--no-idl évite l’erreur "Failed to initialize IDL")
+anchor deploy --provider.cluster devnet --no-idl
 ```
+
+Si vous utilisez une commande du type `anchor program deploy`, ajoutez `--no-idl` si elle est supportée. L’app utilise `app/lib/voting-instruction.ts` et n’a pas besoin de l’IDL on-chain.
+
+#### Afficher le nom du candidat (crunchy/smooth) dans l’explorateur Solana
+
+Pour que les **logs** affichent `Candidate: crunchy` ou `Candidate: smooth` et que l’**Arguments** puisse afficher le nom au lieu de 0/1, il faut que la **version déployée** soit à jour :
+
+1. **Rebuild et redéploiement** (depuis `anchor/`) :
+   ```bash
+   anchor build
+   anchor deploy --provider.cluster devnet --no-idl
+   ```
+2. **Logs** : les prochaines transactions afficheront dans "Program Instruction Logs" la ligne `Candidate: crunchy` ou `Candidate: smooth`.
+3. **Arguments (nom au lieu de 0/1)** : sur [explorer.solana.com](https://explorer.solana.com), va sur la page du programme (devnet), onglet "Verification" / "IDL", et dépose le fichier `anchor/target/idl/voting.json` (généré par `anchor build`) pour que l’explorateur décode l’enum et affiche "crunchy" ou "smooth".
+
+#### Si l’upgrade échoue : "account data too small for instruction"
+
+Quand le **nouveau** binaire est plus gros que l’espace alloué au programme déjà déployé, il faut d’abord **étendre** le compte ProgramData, puis refaire l’upgrade :
+
+```bash
+# 1. Vérifier le programme (optionnel)
+solana program show E4tUxezap8Gj42fHCxndPenNxNPARYVRyH6yhFABn3gL --url devnet
+
+# 2. Étendre l’espace (ex. +100 Ko). Utiliser le keypair défini dans Anchor.toml [provider].wallet (signataire = upgrade authority)
+solana program extend E4tUxezap8Gj42fHCxndPenNxNPARYVRyH6yhFABn3gL 100000 \
+  --keypair /home/kaliloulah1155/my-new-wallet.json \
+  --url https://api.devnet.solana.com
+
+# 3. Refaire l’upgrade
+anchor deploy --provider.cluster devnet --no-idl
+```
+
+Si 100000 octets ne suffisent pas, augmenter (ex. `200000`). L’extension consomme du rent (SOL) sur le compte.
+
+#### Si "Failed to initialize IDL" après l’upgrade
+
+Le programme est déjà mis à jour ; l’erreur vient de l’écriture du compte IDL/métadonnées. Pour les prochains déploiements, utilisez `--no-idl` pour ne pas envoyer l’IDL on-chain :
+
+```bash
+anchor deploy --provider.cluster devnet --no-idl
+```
+
+L’explorateur Solana peut toujours afficher les arguments si vous uploadez manuellement `anchor/target/idl/voting.json` dans l’onglet Verification / IDL du programme.
 
 ### 5. Regenerate the TypeScript client
 
